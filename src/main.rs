@@ -483,7 +483,8 @@ fn update_brave(rootfs: &Path, download_url: &str, version: &str) -> Result<(), 
     let container_path = Path::new("/").join(relative_path);
 
     let link_path = rootfs.join("usr/bin/brave");
-    if link_path.exists() {
+    // Use symlink_metadata to detect broken symlinks (exists() returns false for them)
+    if fs::symlink_metadata(&link_path).is_ok() {
         fs::remove_file(&link_path)?;
     }
     std::os::unix::fs::symlink(container_path, link_path)?;
@@ -823,7 +824,8 @@ echo "Setup complete!"
 
     fs::create_dir_all(rootfs.join("usr/bin"))?;
     let link_path = rootfs.join("usr/bin/brave");
-    if link_path.exists() {
+    // Use symlink_metadata to detect broken symlinks (exists() returns false for them)
+    if fs::symlink_metadata(&link_path).is_ok() {
         fs::remove_file(&link_path)?;
     }
     std::os::unix::fs::symlink(container_path, link_path)?;
