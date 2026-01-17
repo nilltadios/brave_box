@@ -728,6 +728,7 @@ fn check_self_update(force: bool) -> Result<bool, Box<dyn std::error::Error>> {
         .repo_owner("nilltadios")
         .repo_name("brave_box")
         .bin_name("void_runner")
+        .identifier("void_runner")  // Match exact asset name
         .current_version(VERSION)
         .build()?;
 
@@ -754,6 +755,7 @@ fn check_self_update(force: bool) -> Result<bool, Box<dyn std::error::Error>> {
         .repo_owner("nilltadios")
         .repo_name("brave_box")
         .bin_name("void_runner")
+        .identifier("void_runner")  // Match exact asset name
         .current_version(VERSION)
         .build()?
         .update()?;
