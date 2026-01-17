@@ -1,41 +1,70 @@
-# Brave Box (Void Runner)
+# Void Runner
 
 A single-binary, portable, and isolated Brave Browser environment for Linux.
 
 ## Features
 
-*   **Single Binary**: No external dependencies (no Docker, Podman, or Flatpak required).
-*   **Portable**: Works on Fedora, Ubuntu, Debian, Arch, and more.
-*   **Isolated**: Runs in a dedicated User/Mount/PID namespace.
-*   **Hardware Accelerated**: Full GPU and Audio (Pipewire/PulseAudio) passthrough.
-*   **Auto-Updating**: Automatically checks and updates Brave on launch.
-*   **Self-Healing**: Automatically rebuilds the container if corrupted.
+- **Single Binary**: No external dependencies (no Docker, Podman, or Flatpak required)
+- **Auto-Install**: First run installs to `~/.local/bin` and creates a desktop launcher
+- **Auto-Update**: Automatically updates both Brave and void_runner itself on launch
+- **Portable**: Works on Fedora, Ubuntu, Debian, Arch, and more
+- **Isolated**: Runs in a dedicated User/Mount/PID namespace
+- **Hardware Accelerated**: Full GPU and Audio (Pipewire/PulseAudio) passthrough
 
-## Usage
+## Installation
 
-Download the binary `brave_box` and run it:
+Download `void_runner`, make it executable, and run it:
 
 ```bash
-chmod +x brave_box
-./brave_box
+chmod +x void_runner
+./void_runner
 ```
 
-Or just double-click it in your file manager.
+On first run, it will:
+1. Install itself to `~/.local/bin/void_runner`
+2. Create a desktop launcher (appears in your app menu)
+3. Download and set up an isolated Brave browser environment
+4. Launch Brave
+
+After installation, just run `void_runner` from anywhere or click the app launcher.
+
+## Commands
+
+```
+void_runner              # Launch Brave (default)
+void_runner run          # Launch Brave
+void_runner run --url    # Launch Brave with a specific URL
+void_runner update       # Update Brave browser
+void_runner self-update  # Update void_runner itself
+void_runner uninstall    # Remove void_runner (keeps browser data)
+void_runner uninstall --purge  # Remove everything
+void_runner info         # Show version and update status
+```
 
 ## Building from Source
 
-Requirements: Rust (cargo).
+Requirements: Rust 1.85+ (uses Rust 2024 edition)
 
 ```bash
 cargo build --release
-cp target/release/void_runner brave_box
+./target/release/void_runner
 ```
 
 ## How it Works
 
-The binary contains a bootstrap logic that:
-1.  Downloads a minimal Ubuntu 22.04 RootFS.
-2.  Sets up a user namespace (mapping your user to root).
-3.  Installs Brave and dependencies inside the container.
-4.  Bind-mounts host hardware interfaces (/dev/dri, /dev/snd, Wayland sockets).
-5.  Launches the browser.
+1. Downloads a minimal Ubuntu base rootfs
+2. Sets up Linux namespaces (user, mount, PID, UTS, IPC)
+3. Installs Brave and dependencies inside the isolated environment
+4. Bind-mounts host hardware interfaces (GPU, audio, Wayland/X11)
+5. Launches Brave in the isolated container
+
+## Uninstalling
+
+```bash
+void_runner uninstall          # Removes binary and launcher, keeps browser data
+void_runner uninstall --purge  # Removes everything including browser data
+```
+
+## License
+
+MIT

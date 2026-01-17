@@ -53,6 +53,12 @@ enum Commands {
         #[arg(long)]
         force: bool,
     },
+    /// Uninstall void_runner completely
+    Uninstall {
+        /// Also remove browser data and rootfs
+        #[arg(long)]
+        purge: bool,
+    },
     /// Show version and installed component info
     Info,
     /// Internal initialization (do not use manually)
@@ -168,6 +174,56 @@ StartupWMClass=brave-browser
 
     println!("[void_runner] Installation complete!");
     println!("[void_runner] You can now run 'void_runner' from anywhere or find it in your app launcher.");
+
+    Ok(())
+}
+
+fn uninstall_self(purge: bool) -> Result<(), Box<dyn std::error::Error>> {
+    let install_path = get_install_path();
+    let desktop_path = get_desktop_file_path();
+    let data_dir = get_data_dir();
+
+    println!("[void_runner] Uninstalling...");
+
+    // Remove binary
+    if install_path.exists() {
+        fs::remove_file(&install_path)?;
+        println!("  Removed {}", install_path.display());
+    }
+
+    // Remove desktop file
+    if desktop_path.exists() {
+        fs::remove_file(&desktop_path)?;
+        println!("  Removed {}", desktop_path.display());
+    }
+
+    // Remove icon
+    let icon_path = data_dir.join("void_runner.png");
+    if icon_path.exists() {
+        fs::remove_file(&icon_path)?;
+        println!("  Removed {}", icon_path.display());
+    }
+
+    if purge {
+        // Remove entire data directory (rootfs, config, etc.)
+        if data_dir.exists() {
+            println!("  Removing data directory (this may take a moment)...");
+            fs::remove_dir_all(&data_dir)?;
+            println!("  Removed {}", data_dir.display());
+        }
+    } else {
+        // Just remove installed.json but keep rootfs
+        let info_path = data_dir.join("installed.json");
+        if info_path.exists() {
+            fs::remove_file(&info_path)?;
+        }
+        println!();
+        println!("  Note: Browser data kept at {}", data_dir.display());
+        println!("  Use --purge to remove everything including browser data.");
+    }
+
+    println!();
+    println!("[void_runner] Uninstall complete!");
 
     Ok(())
 }
@@ -512,6 +568,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
                 Err(e) => println!("[void_runner] Failed to check for updates: {}", e),
+            }
+        }
+
+        Commands::Uninstall { purge } => {
+            if purge {
+                println!("[void_runner] This will remove void_runner and ALL browser data.");
+            } else {
+                println!("[void_runner] This will remove void_runner but keep browser data.");
+            }
+            print!("Continue? [y/N] ");
+            std::io::Write::flush(&mut std::io::stdout())?;
+
+            let mut input = String::new();
+            std::io::stdin().read_line(&mut input)?;
+
+            if input.trim().to_lowercase() == "y" {
+                uninstall_self(purge)?;
+            } else {
+                println!("[void_runner] Uninstall cancelled.");
             }
         }
 
