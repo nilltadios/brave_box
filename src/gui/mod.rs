@@ -6,7 +6,11 @@
 //! - Error/info messages
 //! - Yes/No questions
 
+pub mod installer;
+pub use installer::{InstallType, run_installer};
+
 use std::io::Write;
+
 use std::process::{Child, Command, Stdio};
 
 /// Check if we're running in a GUI environment (not a TTY)

@@ -68,7 +68,10 @@ fn ensure_runtime_installed(app_name: &str, gui_mode: bool) -> Result<(), Launch
     // Install voidbox if not present
     if !voidbox_installed {
         if !gui_mode {
-            println!("[voidbox] Installing voidbox to {}...", voidbox_path.display());
+            println!(
+                "[voidbox] Installing voidbox to {}...",
+                voidbox_path.display()
+            );
         }
         fs::copy(&current_exe, &voidbox_path)?;
 
@@ -173,48 +176,15 @@ pub fn run_launcher(app_name: &str) -> Result<(), LauncherError> {
     if !app_installed {
         // App not installed - install it
         if gui_mode {
-            let should_install = gui::ask_yes_no(
-                &format!("Install {}", display_name),
-                &format!(
-                    "{} is not installed.\n\n\
-                    This will download and install {}.\n\
-                    It may take a few minutes.\n\n\
-                    Install now?",
-                    display_name, display_name
-                ),
-            );
-            if !should_install {
-                return Ok(());
-            }
+            use crate::gui::{InstallType, run_installer};
 
-            let progress = gui::ProgressDialog::new(
-                &format!("Installing {}", display_name),
-                &format!(
-                    "Downloading and installing {}...\nThis may take a few minutes.",
-                    display_name
-                ),
-            );
-
-            // Write manifest and install
-            std::fs::write(&manifest_path, manifest_content)?;
-            match cli::install_app_from_manifest(&manifest, false) {
-                Ok(()) => {
-                    drop(progress);
-                    gui::notify(
-                        "Installation Complete",
-                        &format!("{} has been installed!", display_name),
-                    );
-                }
-                Err(e) => {
-                    drop(progress);
-                    // Clean up partial install
-                    let _ = std::fs::remove_file(&manifest_path);
-                    gui::show_error(
-                        "Installation Failed",
-                        &format!("Failed to install {}:\n\n{}", display_name, e),
-                    );
-                    return Err(e.into());
-                }
+            if let Err(e) = run_installer(InstallType::AppInstall {
+                name: app_name.to_string(),
+                display_name: display_name.clone(),
+                manifest_content: manifest_content.to_string(),
+            }) {
+                eprintln!("GUI Error: {}", e);
+                std::process::exit(1);
             }
         } else {
             println!("[voidbox] Installing {}...", display_name);

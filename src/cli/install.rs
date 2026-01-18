@@ -372,7 +372,10 @@ fn get_ubuntu_codename(rootfs: &Path) -> String {
 
 /// Download and install the app binary
 /// Returns the actual version downloaded (if available)
-fn install_app_binary(rootfs: &Path, manifest: &AppManifest) -> Result<Option<String>, InstallError> {
+fn install_app_binary(
+    rootfs: &Path,
+    manifest: &AppManifest,
+) -> Result<Option<String>, InstallError> {
     let (version, download_url) = match &manifest.source {
         SourceConfig::Github {
             owner,
@@ -410,7 +413,11 @@ fn install_app_binary(rootfs: &Path, manifest: &AppManifest) -> Result<Option<St
         }
     };
 
-    let actual_version = if version != "latest" { Some(version.clone()) } else { None };
+    let actual_version = if version != "latest" {
+        Some(version.clone())
+    } else {
+        None
+    };
 
     println!(
         "[voidbox] Downloading {} v{}...",
@@ -614,7 +621,10 @@ fn copy_dir_all(src: &Path, dst: &Path) -> Result<(), InstallError> {
     Ok(())
 }
 
-fn save_installed_app(manifest: &AppManifest, actual_version: Option<&str>) -> Result<(), InstallError> {
+fn save_installed_app(
+    manifest: &AppManifest,
+    actual_version: Option<&str>,
+) -> Result<(), InstallError> {
     let db_path = paths::database_path();
 
     let mut apps: Vec<InstalledApp> = if db_path.exists() {

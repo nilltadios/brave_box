@@ -99,9 +99,7 @@ pub fn update_app(app_name: &str, force: bool) -> Result<(), UpdateError> {
 
     // Check for updates based on source type
     let latest_version = match &manifest.source {
-        SourceConfig::Github { owner, repo, .. } => {
-            Some(get_latest_github_version(owner, repo)?)
-        }
+        SourceConfig::Github { owner, repo, .. } => Some(get_latest_github_version(owner, repo)?),
         SourceConfig::Direct { .. } => None, // Can't check version for direct URLs
         SourceConfig::Local { .. } => None,  // Local sources don't have remote versions
     };
@@ -110,10 +108,7 @@ pub fn update_app(app_name: &str, force: bool) -> Result<(), UpdateError> {
     if !force {
         if let (Some(installed), Some(latest)) = (&installed_version, &latest_version) {
             if !is_newer_version(installed, latest) {
-                println!(
-                    "[voidbox] {} is up to date (v{})",
-                    display_name, installed
-                );
+                println!("[voidbox] {} is up to date (v{})", display_name, installed);
                 return Ok(());
             }
             println!(

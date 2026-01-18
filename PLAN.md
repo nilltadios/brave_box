@@ -640,16 +640,17 @@ src/
 
 #### 1.4 Deliverables
 
-- [ ] Manifest TOML schema and parser
-- [ ] `voidbox install <app>` command
-- [ ] `voidbox remove <app>` command
-- [ ] `voidbox run <app>` command
-- [ ] `voidbox list` command
-- [ ] `voidbox update` command
-- [ ] Desktop file generation
-- [ ] Symlink creation for PATH
-- [ ] Home folder bind mount (default ON)
-- [ ] Theme/font bind mounts
+- [x] Manifest TOML schema and parser
+- [x] `voidbox install <app>` command
+- [x] `voidbox remove <app>` command
+- [x] `voidbox run <app>` command
+- [x] `voidbox list` command
+- [x] `voidbox update` command
+- [x] Desktop file generation
+- [x] Symlink creation for PATH
+- [x] Home folder bind mount (default ON)
+- [x] Theme/font bind mounts
+- [x] Native GUI Installer (egui) - *Completed ahead of schedule*
 
 ---
 

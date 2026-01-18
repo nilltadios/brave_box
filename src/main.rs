@@ -233,12 +233,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 microphone: false,
                 gpu: false,
                 camera: false,
-                home: false,      // Don't mount home during install
+                home: false, // Don't mount home during install
                 downloads: false,
                 removable_media: false,
                 dev_mode: false,
-                fonts: false,     // Don't mount fonts - let packages install
-                themes: false,    // Don't mount themes/icons - let packages install
+                fonts: false,  // Don't mount fonts - let packages install
+                themes: false, // Don't mount themes/icons - let packages install
             };
             setup_user_namespace()?;
             setup_container_namespaces()?;
@@ -334,6 +334,7 @@ fn run_as_launcher(app_name: &str) -> Result<(), Box<dyn std::error::Error>> {
 /// GUI installation mode - triggered when double-clicking the binary
 fn gui_install_mode() -> Result<(), Box<dyn std::error::Error>> {
     use voidbox::desktop;
+    use voidbox::gui::{InstallType, run_installer};
 
     // Check if already installed
     if desktop::is_installed() {
@@ -352,56 +353,11 @@ fn gui_install_mode() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
 
-    // Ask user if they want to install
-    let should_install = gui::ask_yes_no(
-        "Install Voidbox",
-        &format!(
-            "Voidbox v{} - Universal Linux App Platform\n\n\
-            This will install voidbox to:\n\
-            - ~/.local/bin/voidbox\n\n\
-            Voidbox allows you to run portable Linux apps\n\
-            in isolated containers without root access.\n\n\
-            Install now?",
-            voidbox::VERSION
-        ),
-    );
-
-    if !should_install {
-        return Ok(());
-    }
-
-    // Show progress
-    let progress = gui::ProgressDialog::new("Installing Voidbox", "Installing voidbox...");
-
-    // Ensure directories exist
-    paths::ensure_dirs()?;
-
-    // Install
-    match install_self() {
-        Ok(()) => {
-            progress.close();
-            gui::show_info(
-                "Installation Complete",
-                &format!(
-                    "Voidbox v{} has been installed successfully!\n\n\
-                    You can now:\n\
-                    - Download app binaries (e.g., void_brave)\n\
-                    - Double-click them to install and run\n\n\
-                    Or use the terminal:\n\
-                    - voidbox install <app.toml>\n\
-                    - voidbox run <app>",
-                    voidbox::VERSION
-                ),
-            );
-        }
-        Err(e) => {
-            progress.close();
-            gui::show_error(
-                "Installation Failed",
-                &format!("Failed to install voidbox:\n\n{}", e),
-            );
-            return Err(e.into());
-        }
+    // Run the native installer
+    if let Err(e) = run_installer(InstallType::SelfInstall) {
+        eprintln!("GUI Error: {}", e);
+        // Fallback to text mode if GUI fails (unlikely with egui)
+        println!("Falling back to terminal mode...");
     }
 
     Ok(())
