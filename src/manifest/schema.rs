@@ -150,6 +150,10 @@ pub struct PermissionConfig {
     pub fonts: bool,
     #[serde(default = "default_true")]
     pub themes: bool,
+    /// Native mode - use host environment (username, hostname, /usr, /lib)
+    /// The app runs like a normal process but with its own rootfs overlayed
+    #[serde(default)]
+    pub native_mode: bool,
 }
 
 fn default_true() -> bool {
@@ -170,6 +174,7 @@ impl Default for PermissionConfig {
             dev_mode: false,
             fonts: true,
             themes: true,
+            native_mode: false,
         }
     }
 }

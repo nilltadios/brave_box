@@ -64,7 +64,7 @@ pub fn run_app(
     }
 
     // Build command and args
-    let (cmd, cmd_args) = build_command(&manifest, args, url);
+    let (cmd, cmd_args) = build_command(&manifest, args, url, &rootfs)?;
 
     // Setup namespaces
     setup_user_namespace()?;
@@ -86,15 +86,30 @@ fn build_command(
     manifest: &AppManifest,
     args: &[String],
     url: Option<&str>,
-) -> (String, Vec<String>) {
+    rootfs: &Path,
+) -> Result<(String, Vec<String>), RunError> {
     if !args.is_empty() {
         // Custom command specified
-        return (args[0].clone(), args[1..].to_vec());
+        return Ok((args[0].clone(), args[1..].to_vec()));
     }
 
     // Default app command
     let binary_name = &manifest.binary.name;
-    let cmd = format!("/usr/bin/{}", binary_name);
+
+    // Resolve the actual binary path by reading the symlink created during install
+    // This is required for native_mode where /usr/bin is masked by the host
+    let symlink_path = rootfs.join("usr/bin").join(binary_name);
+
+    // Use symlink_metadata to check existence of the link itself, not the target
+    // (since target is absolute path inside container, it won't exist on host)
+    let cmd = if std::fs::symlink_metadata(&symlink_path).is_ok() {
+        match std::fs::read_link(&symlink_path) {
+            Ok(target) => target.to_string_lossy().into_owned(),
+            Err(_) => format!("/usr/bin/{}", binary_name),
+        }
+    } else {
+        format!("/usr/bin/{}", binary_name)
+    };
 
     let mut cmd_args: Vec<String> = manifest.binary.args.clone();
 
@@ -103,7 +118,7 @@ fn build_command(
         cmd_args.push(u.to_string());
     }
 
-    (cmd, cmd_args)
+    Ok((cmd, cmd_args))
 }
 
 /// Internal init function - called after fork in new namespace

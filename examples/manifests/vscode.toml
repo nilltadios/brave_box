@@ -31,12 +31,17 @@ packages = [
     "libdrm2",
     "libasound2t64",  # ALSA audio (required by Electron even if audio disabled)
     "git",
+    # Development tools for extensions
+    "nodejs",
+    "npm",
+    "python3",
+    "python3-pip",
 ]
 
 [binary]
 name = "code"
 install_dir = "vscode"
-args = ["--no-sandbox", "--disable-dev-shm-usage", "--user-data-dir=/tmp/.vscode"]
+args = ["--no-sandbox", "--disable-dev-shm-usage", "--user-data-dir=/tmp/.vscode", "--wait"]
 path = "bin/code"
 
 
@@ -56,6 +61,7 @@ camera = false
 home = true
 downloads = true
 removable_media = false
-dev_mode = true   # VSCode needs access to host tools
+dev_mode = true    # VSCode needs access to host tools
+native_mode = true # Use host /usr, /lib, PATH - enables gemini, claude, pip, etc.
 fonts = true
 themes = true

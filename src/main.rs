@@ -239,6 +239,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 dev_mode: false,
                 fonts: false,  // Don't mount fonts - let packages install
                 themes: false, // Don't mount themes/icons - let packages install
+                native_mode: false,
             };
             setup_user_namespace()?;
             setup_container_namespaces()?;

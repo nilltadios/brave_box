@@ -56,7 +56,37 @@ pub fn get_bind_mounts(permissions: &PermissionConfig) -> Vec<BindMount> {
         BindMount::new("/tmp", "tmp", false),
     ];
 
-    // XDG_RUNTIME_DIR for audio/Wayland
+    // Native mode - mount host's /usr, /lib, /etc for full compatibility
+    if permissions.native_mode {
+        // /run for DNS and other runtime data (must be before XDG_RUNTIME_DIR)
+        mounts.push(BindMount::optional("/run", "run", true));
+
+        // XDG_RUNTIME_DIR for audio/Wayland (RW over /run)
+        if let Ok(runtime_dir) = std::env::var("XDG_RUNTIME_DIR") {
+            let relative = runtime_dir.trim_start_matches('/');
+            mounts.push(BindMount::new(&runtime_dir, relative, false));
+        }
+
+        // Mount entire host userspace (read-only for safety)
+        mounts.push(BindMount::optional("/usr", "usr", true));
+        mounts.push(BindMount::optional("/lib", "lib", true));
+        mounts.push(BindMount::optional("/lib64", "lib64", true));
+        mounts.push(BindMount::optional("/etc", "etc", true));
+        mounts.push(BindMount::optional("/bin", "bin", true));
+        mounts.push(BindMount::optional("/sbin", "sbin", true));
+        // /var for various tools
+        mounts.push(BindMount::optional("/var", "var", true));
+        // Mount home writable
+        if let Ok(home) = std::env::var("HOME") {
+            if let Some(user) = std::env::var("USER").ok() {
+                let container_home = format!("home/{}", user);
+                mounts.push(BindMount::new(&home, &container_home, false));
+            }
+        }
+        return mounts;
+    }
+
+    // XDG_RUNTIME_DIR for audio/Wayland (standard mode)
     if let Ok(runtime_dir) = std::env::var("XDG_RUNTIME_DIR") {
         let relative = runtime_dir.trim_start_matches('/');
         mounts.push(BindMount::new(&runtime_dir, relative, false));
@@ -119,7 +149,7 @@ pub fn get_bind_mounts(permissions: &PermissionConfig) -> Vec<BindMount> {
         }
     }
 
-    // Developer mode - mount host binaries
+    // Developer mode - mount host binaries and tools
     if permissions.dev_mode {
         mounts.push(BindMount::optional("/usr/bin", "host/bin", true));
         mounts.push(BindMount::optional(
@@ -127,18 +157,34 @@ pub fn get_bind_mounts(permissions: &PermissionConfig) -> Vec<BindMount> {
             "host/local/bin",
             true,
         ));
+        // Node global modules (for gemini, claude symlinks)
+        mounts.push(BindMount::optional(
+            "/usr/local/lib",
+            "host/local/lib",
+            true,
+        ));
 
-        // Python packages
         if let Ok(home) = std::env::var("HOME") {
+            // User's local bin (pip, gemini, claude, etc.)
+            mounts.push(BindMount::optional(
+                &format!("{}/.local/bin", home),
+                &format!("host/user/bin"),
+                true,
+            ));
+
+            // Python packages and pyenv
             mounts.push(BindMount::optional(
                 &format!("{}/.local/lib", home),
                 "host/python-lib",
                 true,
             ));
-        }
+            mounts.push(BindMount::optional(
+                &format!("{}/.pyenv", home),
+                &format!("{}.pyenv", home.trim_start_matches('/')),
+                true,
+            ));
 
-        // Node.js global packages
-        if let Ok(home) = std::env::var("HOME") {
+            // Node.js global packages
             mounts.push(BindMount::optional(
                 &format!("{}/.npm", home),
                 "host/npm",
@@ -149,10 +195,14 @@ pub fn get_bind_mounts(permissions: &PermissionConfig) -> Vec<BindMount> {
                 "host/nvm",
                 true,
             ));
-        }
+            // Also mount nvm to same path for shebang compatibility
+            mounts.push(BindMount::optional(
+                &format!("{}/.nvm", home),
+                &format!("{}.nvm", home.trim_start_matches('/')),
+                true,
+            ));
 
-        // Cargo/Rust
-        if let Ok(home) = std::env::var("HOME") {
+            // Cargo/Rust
             mounts.push(BindMount::optional(
                 &format!("{}/.cargo", home),
                 "host/cargo",
@@ -161,6 +211,12 @@ pub fn get_bind_mounts(permissions: &PermissionConfig) -> Vec<BindMount> {
             mounts.push(BindMount::optional(
                 &format!("{}/.rustup", home),
                 "host/rustup",
+                true,
+            ));
+            // Mount cargo bin to same path for shebang compatibility
+            mounts.push(BindMount::optional(
+                &format!("{}/.cargo/bin", home),
+                &format!("{}.cargo/bin", home.trim_start_matches('/')),
                 true,
             ));
         }
@@ -238,7 +294,7 @@ pub fn setup_container_mounts(
 }
 
 /// Perform pivot_root to switch to container filesystem
-pub fn pivot_to_container(rootfs: &Path) -> Result<(), MountError> {
+pub fn pivot_to_container(rootfs: &Path, permissions: &PermissionConfig) -> Result<(), MountError> {
     let old_root = rootfs.join("old_root");
     fs::create_dir_all(&old_root)?;
 
@@ -265,20 +321,33 @@ pub fn pivot_to_container(rootfs: &Path) -> Result<(), MountError> {
         .map_err(|e| MountError::MountFailed(format!("umount old_root: {}", e)))?;
     fs::remove_dir("/old_root")?;
 
-    // Set hostname
-    sethostname(crate::CONTAINER_HOSTNAME)
-        .map_err(|e| MountError::MountFailed(format!("sethostname: {}", e)))?;
+    // Set hostname - skip in native mode to preserve host hostname
+    if !permissions.native_mode {
+        sethostname(crate::CONTAINER_HOSTNAME)
+            .map_err(|e| MountError::MountFailed(format!("sethostname: {}", e)))?;
+    }
 
     Ok(())
 }
 
 /// Setup environment variables for container
-pub fn setup_container_env() {
+pub fn setup_container_env(permissions: &PermissionConfig) {
     unsafe {
-        std::env::set_var(
-            "PATH",
-            "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/host/bin:/host/local/bin",
-        );
+        // In native mode, preserve the host PATH
+        if permissions.native_mode {
+            // Keep the existing PATH, just ensure it exists
+            if std::env::var("PATH").is_err() {
+                std::env::set_var(
+                    "PATH",
+                    "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                );
+            }
+        } else {
+            std::env::set_var(
+                "PATH",
+                "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/host/bin:/host/local/bin:/host/user/bin",
+            );
+        }
 
         // Set HOME based on whether we mounted user's home
         if let Ok(user) = std::env::var("USER") {

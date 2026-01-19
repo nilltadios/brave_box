@@ -25,6 +25,7 @@ pub fn merge_permissions(
             dev_mode: ov.dev_mode,
             fonts: ov.fonts,
             themes: ov.themes,
+            native_mode: ov.native_mode,
         },
         None => manifest.clone(),
     }

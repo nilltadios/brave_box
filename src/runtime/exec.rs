@@ -88,9 +88,10 @@ pub fn init_and_exec(
     setup_container_mounts(rootfs, permissions)
         .map_err(|e| ExecError::ExecFailed(format!("mount setup: {}", e)))?;
 
-    pivot_to_container(rootfs).map_err(|e| ExecError::ExecFailed(format!("pivot_root: {}", e)))?;
+    pivot_to_container(rootfs, permissions)
+        .map_err(|e| ExecError::ExecFailed(format!("pivot_root: {}", e)))?;
 
-    setup_container_env();
+    setup_container_env(permissions);
     start_dbus()?;
 
     exec_replace(cmd, args)
