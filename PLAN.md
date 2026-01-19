@@ -83,6 +83,7 @@ A universal Linux application platform that prioritizes portability and usabilit
 | Offline launch (if update fails) | ✅ |
 | Configurable via app.rs | ✅ |
 | Uninstall command | ✅ |
+| Host tool integration (native_mode) | ✅ |
 
 ### Current Architecture
 
@@ -1088,11 +1089,11 @@ voidbox run --profile paranoid discord
 
 ### Phase 1 Success
 
-- [ ] 5+ apps packaged and working
-- [ ] Install/run/update cycle works reliably
-- [ ] Home folder access works by default
-- [ ] Host pip/npm visible in dev containers
-- [ ] Zero configuration needed for basic use
+- [x] 5+ apps packaged and working
+- [x] Install/run/update cycle works reliably
+- [x] Home folder access works by default
+- [x] Host pip/npm visible in dev containers (via native_mode)
+- [x] Zero configuration needed for basic use
 
 ### Phase 2 Success
 
@@ -1187,7 +1188,13 @@ MIT
 
 ## Changelog
 
-### v0.5.0 (Current)
+### v0.6.0 (Current)
+- Added `native_mode` permission for seamless host integration (access host /usr, /lib, tools)
+- Fixed binary execution path resolution for native applications
+- Improved DNS resolution in container environments
+- Updated manifest schema to support archive types and explicit binary paths
+
+### v0.5.0
 - Refactored for easy forking via `src/app.rs`
 - Support for multiple archive types (Zip, TarGz, TarXz)
 - Updated README with forking instructions
